@@ -1,0 +1,6 @@
+# list of files and folders that should not be tracked in GIT
+
+
+.venv/
+.vscode/
+__pycache__/
