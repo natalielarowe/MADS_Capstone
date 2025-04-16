@@ -6,11 +6,11 @@ import requests, zipfile, io
 from geopy import distance
 
 ## get block group coordinates
-blockgroupshp = "https://www2.census.gov/geo/tiger/TIGER2023/BG/tl_2023_48_bg.zip"
-r = requests.get(blockgroupshp)
-zf = zipfile.ZipFile(io.BytesIO(r.content))
-zf.extractall()
-gdf = gpd.read_file('tl_2023_48_bg.shp')
+# blockgroupshp = "https://www2.census.gov/geo/tiger/TIGER2023/BG/tl_2023_48_bg.zip"
+# r = requests.get(blockgroupshp, stream=True)
+# zf = zipfile.ZipFile(io.BytesIO(r.content))
+# zf.extractall()
+gdf = gpd.read_file('tl_2023_48_bg.zip')
 gdf['centroid'] = gdf['geometry'].centroid
 gdf['Block Group Centroid Longitude'] = gdf['centroid'].x
 gdf['Block Group Centroid Latitude'] = gdf['centroid'].y
