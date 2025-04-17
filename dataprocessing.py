@@ -4,6 +4,49 @@ import warnings
 import geopandas as gpd
 import requests, zipfile, io
 from geopy import distance
+import warnings
+warnings.filterwarnings('ignore')
+
+
+## Adapted from Leon's code
+### Adapted from Michael Dunn in stacoverflow:
+### https://stackoverflow.com/questions/4913349/haversine-formula-in-python-bearing-and-distance-between-two-gps-points
+### Haversine distance function: input lat/lon ... returns km
+def haversine(lon1, lat1, lon2, lat2):
+    # Convert decimal degrees to radians.
+    lon1, lat1, lon2, lat2 = map(np.radians, [lon1, lat1, lon2, lat2])
+    dlon = lon2 - lon1 
+    dlat = lat2 - lat1 
+    a = np.sin(dlat/2.0)**2 + np.cos(lat1)*np.cos(lat2)*np.sin(dlon/2.0)**2
+    c = 2 * np.arcsin(np.sqrt(a))
+    km = 6371 * c
+    mi = km * 0.621371
+    return mi
+
+# process to find the closest store for a given tract row
+def find_closest_store(row):
+    lat_tract = float(row['Block Group Centroid Latitude'])
+    lon_tract = float(row['Block Group Centroid Longitude'])
+    # estimate vectored distances from this tract to all stores
+    dists = haversine(lon_tract, lat_tract, snapdf_healthy['Longitude'].values, snapdf_healthy['Latitude'].values)
+    min_idx = np.argmin(dists)
+    return pd.Series({'Closest_Record_ID': snapdf_healthy.iloc[min_idx]['Record ID'],'Distance_mi': dists[min_idx],
+                      'Closest store type': snapdf_healthy.iloc[min_idx]['Store Type']
+    })
+
+
+# process to find the max radius for a given block group
+def find_radius(row):
+
+    centroid = row['geometry'].centroid
+    max_distance = 0
+
+    for point in row['geometry'].exterior.coords:
+        lon, lat = point
+        dist=haversine(lon, lat, centroid.x, centroid.y)
+        max_distance = max(max_distance, dist)
+    return max_distance
+
 
 ## get block group coordinates
 # blockgroupshp = "https://www2.census.gov/geo/tiger/TIGER2023/BG/tl_2023_48_bg.zip"
@@ -14,7 +57,8 @@ gdf = gpd.read_file('tl_2023_48_bg.zip')
 gdf['centroid'] = gdf['geometry'].centroid
 gdf['Block Group Centroid Longitude'] = gdf['centroid'].x
 gdf['Block Group Centroid Latitude'] = gdf['centroid'].y
-block_group_coordinates = gdf[['GEOIDFQ', 'Block Group Centroid Latitude', 'Block Group Centroid Longitude']]
+gdf['maxradius'] = gdf.apply(find_radius, axis=1)
+block_group_coordinates = gdf[['GEOIDFQ', 'Block Group Centroid Latitude', 'Block Group Centroid Longitude', 'maxradius', 'geometry']]
 block_group_coordinates = block_group_coordinates.rename(columns={'GEOIDFQ': 'Geo Index'})
 
 
@@ -109,32 +153,36 @@ ffdf = ffdf[['latitude', 'longitude']]
 ffdf = ffdf.rename(columns={'latitude': 'Latitude', 'longitude': 'Longitude'})
 ffdf['Store Type'] = "Fast Food"
 
+food_swamp_df = pd.concat([snapdf_swamp, ffdf], ignore_index=True)
 
-## Adapted from Leon's code
-### Adapted from Michael Dunn in stacoverflow:
-### https://stackoverflow.com/questions/4913349/haversine-formula-in-python-bearing-and-distance-between-two-gps-points
-### Haversine distance function: input lat/lon ... returns km
-def haversine(lon1, lat1, lon2, lat2):
-    # Convert decimal degrees to radians.
-    lon1, lat1, lon2, lat2 = map(np.radians, [lon1, lat1, lon2, lat2])
-    dlon = lon2 - lon1 
-    dlat = lat2 - lat1 
-    a = np.sin(dlat/2.0)**2 + np.cos(lat1)*np.cos(lat2)*np.sin(dlon/2.0)**2
-    c = 2 * np.arcsin(np.sqrt(a))
-    km = 6371 * c
-    mi = km * 0.621371
-    return mi
+## Written by Megan
+food_swamp_gdf = gpd.GeoDataFrame(
+    food_swamp_df, 
+    geometry=gpd.points_from_xy(food_swamp_df.Longitude, food_swamp_df.Latitude)
+)
 
-# process to find the closest store for a given tract row
-def find_closest_store(row):
-    lat_tract = float(row['Block Group Centroid Latitude'])
-    lon_tract = float(row['Block Group Centroid Longitude'])
-    # estimate vectored distances from this tract to all stores
-    dists = haversine(lon_tract, lat_tract, snapdf_healthy['Longitude'].values, snapdf_healthy['Latitude'].values)
-    min_idx = np.argmin(dists)
-    return pd.Series({'Closest_Record_ID': snapdf_healthy.iloc[min_idx]['Record ID'],'Distance_mi': dists[min_idx],
-                      'Closest store type': snapdf_healthy.iloc[min_idx]['Store Type']
-    })
+fs_data = gpd.GeoDataFrame(block_group_coordinates, geometry='geometry')
+food_swamp_gdf = food_swamp_gdf.set_crs(fs_data.crs, allow_override=True)
+
+# Identify food swamps in each blockgroup
+food_within_blockgroups = gpd.sjoin(food_swamp_gdf, fs_data, how='left', predicate='within')
+food_counts = (food_within_blockgroups.groupby(['Geo Index','Store Type'])
+            .size()
+            .unstack(fill_value=0))
+
+if 'Fast Food' not in food_counts.columns:
+    food_counts['Fast Food'] = 0
+if 'Convenience Store' not in food_counts.columns:
+    food_counts['Convenience Store'] = 0
+
+food_counts['unhealthy'] = food_counts['Fast Food'] + food_counts['Convenience Store']
+food_counts.reset_index(inplace=True)
+
+fs_data = pd.merge(fs_data, food_counts[['Geo Index','unhealthy']], on='Geo Index', how='left')
+fs_data['unhealthy'] = fs_data['unhealthy'].fillna(0)
+
+threshold = 1
+fs_data['food_swamp_flag'] = (fs_data['unhealthy'] > threshold).astype(int)
 
 
 
@@ -143,7 +191,7 @@ def get_blockgroup_data():
     mergedf = pd.merge(totalpopdf, occupancydf, on='Geo Index', how='left')
     mergedf = pd.merge(mergedf, povdf, on='Geo Index', how='left')
     mergedf = pd.merge(mergedf, vehiclesdf, on='Geo Index', how='left')
-    mergedf = pd.merge(mergedf, block_group_coordinates, on='Geo Index', how='left')
+    mergedf = pd.merge(mergedf, fs_data, on='Geo Index', how='left')
     mergedf = pd.merge(mergedf, classifdf, on='Geo Index', how='left')
     mergedf['Percent Poverty Level'] = mergedf['Households Below Poverty Level'] / mergedf['Occupied Housing Units']
     mergedf['Households with No Vehicle Access'] = mergedf['Owner Occupied Households No Vehicle'] + mergedf['Renter Occupied Households No Vehicle']
@@ -154,12 +202,42 @@ def get_blockgroup_data():
 
 
 
-"""
--ratio of unhealthy outlets (fast food, convenience stores) to healthy outlets (supermarkets/grocery stores).
--counts of fast-food and convenience stores vs. supermarkets/grocery stores within each block group (or within a set distance, like 1 mile)
--A way to distinguish outlet types (fast-food vs. full-service, convenience store vs. supermarket.)
-STILL MISSING FULL SERVICE RESTAURANT LOCATIONS
-"""
-def get_foodswamp_data():
-    foodswamp_df = pd.concat([snapdf_swamp, ffdf], ignore_index=True)
-    return foodswamp_df
+# """
+# -ratio of unhealthy outlets (fast food, convenience stores) to healthy outlets (supermarkets/grocery stores).
+# -counts of fast-food and convenience stores vs. supermarkets/grocery stores within each block group (or within a set distance, like 1 mile)
+# -A way to distinguish outlet types (fast-food vs. full-service, convenience store vs. supermarket)
+# """
+# def get_foodswamp_data():
+#     food_swamp_df = pd.concat([snapdf_swamp, ffdf], ignore_index=True)
+
+#     ## Written by Megan
+#     food_swamp_gdf = gpd.GeoDataFrame(
+#         food_swamp_df, 
+#         geometry=gpd.points_from_xy(food_swamp_df.Longitude, food_swamp_df.Latitude)
+#     )
+
+#     fs_data = gpd.GeoDataFrame(block_group_coordinates, geometry='geometry')
+#     food_swamp_gdf = food_swamp_gdf.set_crs(fs_data.crs, allow_override=True)
+
+#     # Identify food swamps in each blockgroup
+#     food_within_blockgroups = gpd.sjoin(food_swamp_gdf, fs_data, how='left', predicate='within')
+#     food_counts = (food_within_blockgroups.groupby(['Geo Index','Store Type'])
+#                 .size()
+#                 .unstack(fill_value=0))
+
+#     if 'Fast Food' not in food_counts.columns:
+#         food_counts['Fast Food'] = 0
+#     if 'Convenience Store' not in food_counts.columns:
+#         food_counts['Convenience Store'] = 0
+
+#     food_counts['unhealthy'] = food_counts['Fast Food'] + food_counts['Convenience Store']
+#     food_counts.reset_index(inplace=True)
+
+#     fs_data = pd.merge(fs_data, food_counts[['Geo Index','unhealthy']], on='Geo Index', how='left')
+#     fs_data['unhealthy'] = fs_data['unhealthy'].fillna(0)
+
+#     threshold = 1
+#     fs_data['food_swamp_flag'] = (fs_data['unhealthy'] > threshold).astype(int)
+
+
+#     return fs_data
