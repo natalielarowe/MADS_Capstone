@@ -8,7 +8,6 @@ import warnings
 warnings.filterwarnings('ignore')
 
 
-## Adapted from Leon's code
 ### Adapted from Michael Dunn in stacoverflow:
 ### https://stackoverflow.com/questions/4913349/haversine-formula-in-python-bearing-and-distance-between-two-gps-points
 ### Haversine distance function: input lat/lon ... returns km
@@ -49,6 +48,8 @@ def find_radius(row):
 
 
 ## get block group coordinates
+## This used to work but now yields a "Bad Zip File" error. Our workaround is to download the zip directly
+# #to our computers and drag/drop into the folder than this repo is cloned into. Directions for this are in the ReadMe file
 # blockgroupshp = "https://www2.census.gov/geo/tiger/TIGER2023/BG/tl_2023_48_bg.zip"
 # r = requests.get(blockgroupshp, stream=True)
 # zf = zipfile.ZipFile(io.BytesIO(r.content))
@@ -199,45 +200,3 @@ def get_blockgroup_data():
     mergedf['Percent No Vehicle Access'] = mergedf['Households with No Vehicle Access'] / mergedf['Occupied Housing Units']
     mergedf[['Closest_Record_ID', 'Distance_mi', 'Closest store type']] = mergedf.apply(find_closest_store, axis=1)
     return mergedf
-
-
-
-# """
-# -ratio of unhealthy outlets (fast food, convenience stores) to healthy outlets (supermarkets/grocery stores).
-# -counts of fast-food and convenience stores vs. supermarkets/grocery stores within each block group (or within a set distance, like 1 mile)
-# -A way to distinguish outlet types (fast-food vs. full-service, convenience store vs. supermarket)
-# """
-# def get_foodswamp_data():
-#     food_swamp_df = pd.concat([snapdf_swamp, ffdf], ignore_index=True)
-
-#     ## Written by Megan
-#     food_swamp_gdf = gpd.GeoDataFrame(
-#         food_swamp_df, 
-#         geometry=gpd.points_from_xy(food_swamp_df.Longitude, food_swamp_df.Latitude)
-#     )
-
-#     fs_data = gpd.GeoDataFrame(block_group_coordinates, geometry='geometry')
-#     food_swamp_gdf = food_swamp_gdf.set_crs(fs_data.crs, allow_override=True)
-
-#     # Identify food swamps in each blockgroup
-#     food_within_blockgroups = gpd.sjoin(food_swamp_gdf, fs_data, how='left', predicate='within')
-#     food_counts = (food_within_blockgroups.groupby(['Geo Index','Store Type'])
-#                 .size()
-#                 .unstack(fill_value=0))
-
-#     if 'Fast Food' not in food_counts.columns:
-#         food_counts['Fast Food'] = 0
-#     if 'Convenience Store' not in food_counts.columns:
-#         food_counts['Convenience Store'] = 0
-
-#     food_counts['unhealthy'] = food_counts['Fast Food'] + food_counts['Convenience Store']
-#     food_counts.reset_index(inplace=True)
-
-#     fs_data = pd.merge(fs_data, food_counts[['Geo Index','unhealthy']], on='Geo Index', how='left')
-#     fs_data['unhealthy'] = fs_data['unhealthy'].fillna(0)
-
-#     threshold = 1
-#     fs_data['food_swamp_flag'] = (fs_data['unhealthy'] > threshold).astype(int)
-
-
-#     return fs_data
