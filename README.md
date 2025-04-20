@@ -52,7 +52,9 @@ flowchart
 
 Once food_desert_analysis notebook is run, the following food deserts maps can be seen: **<u>XXXXXXXX</u>**(update program name)
 
-![Food Deserts](images/maps.JPG)
+<p align="center">
+  <img src="images/maps.JPG" alt="Food Deserts">
+</p>
 
 ### Raw Data Sources
 
