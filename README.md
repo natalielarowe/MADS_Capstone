@@ -135,10 +135,11 @@ Once food_desert_analysis notebook is run, the following food deserts maps defin
 
 ## Proposed approaches for future work 
 
-* **Update to ACS 2022** : Once the 2022 5-year tables are released (capturing post‑pandemic demographic shifts).  
-* **Interactive dashboard**: Deploy an interactive web application (i.e. Dash) to allow users interact with the thresholds (like poverty %  levels or distances) and instantly redraw maps.  
-* **Transit layer** : Incorporate public transportation routes to test whether proximity by "travel time" changes which tracts qualify.  
-* **Chronic Diseases link** : Statistically model which definition best predicts diabetes or obesity rates, refining current work criteria.
+* **Update to ACS 2022**: Refresh poverty, vehicle‑access, and demographic inputs with the 2018‑2022 5‑year tables to capture post‑pandemic shifts.  
+* **Interactive dashboard**: Deploy a Dash/Streamlit app where users adjust poverty, distance, and vehicle‑access thresholds and watch food‑desert/food‑swamp maps update in real time.  
+* **Enhanced transport layer**: Replace straight‑line buffers with road‑network travel times and public‑transit GTFS feeds to capture true cost and time burdens—especially for rural or low‑car neighborhoods.  
+* **Longitudinal analysis**: Re‑run the preferred definition across multiple years to track how urban development, gentrification, or policy changes reshape food access.  
+* **Chronic‑disease linkage**: Statistically test which definition best predicts diabetes and obesity rates, refining thresholds accordingly.  
 
 ## Acknowledgments  
 We are deeply grateful to our project mentor **Dr. Gabrielle O’Brien**, for her continuous guidance and encouragement. We extend sincere thanks to the entire MADS faculty and every teaching assistant, whose dedication has improved not only our technical skills but also the teamwork and communication abilities that moved this project ahead. Finally, we acknowledge the USDA Economic Research Service and the U.S. Census Bureau for making open data freely available.
