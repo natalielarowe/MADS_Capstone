@@ -25,7 +25,7 @@ The result is a richer understanding of where Texans face barriers to healthy fo
 This repository separates data processing from analysis:
 
 * **`dataprocessing.py`** – loads, cleans, and merges all raw data sources, computing key indicators (e.g., distance to nearest store, population thresholds) and exporting three cleaned datasets.  
-* **`food_desert_analysis.ipynb`** – final Jupyter notebook that reads the cleaned dataset and applies each food‑desert definition, generating maps, charts, and comparative tables.  **<u>XXXXXXXX</u>**(update program name)
+* **`food_desert_analysis.ipynb`** – final Jupyter notebook that reads the cleaned dataset and applies each food‑desert definition, generating maps, charts, and comparative tables. 
 
 
 
@@ -37,7 +37,7 @@ flowchart
         A[ACS & Decennial<br/>demographics] 
         B[USDA SNAP<br/>retailer list] 
         C[Datafiniti<br/>restaurants] 
-        D[TIGER/Line<br/>Block shapes]
+        D[Census TIGER/Line<br/>Block shapes]
     end
     A & B & C & D --> P[dataprocessing.py]
     P --> T[(location&shape table)]
@@ -50,7 +50,7 @@ flowchart
 
 `dataprocessing.py` is deliberately isolated: run it once (detailed instructions in "Getting Started" section below), and every downstream analysis will load the exact same dataset, ensuring reproducibility. 
 
-Once food_desert_analysis notebook is run, the following food deserts maps can be seen: **<u>XXXXXXXX</u>**(update program name)
+Once food_desert_analysis notebook is run, the following food deserts maps definitions we used as a base can be seen: 
 
 <p align="center">
   <img src="images/maps.JPG" alt="Food Deserts">
@@ -62,6 +62,10 @@ Once food_desert_analysis notebook is run, the following food deserts maps can b
   [Census Data – Decennial DHC 2020, ACS, and other tables](https://data.census.gov/table)  
   *Block group level demographics (i.e. income, poverty, vehicle access, race/ethnicity)*
 
+* **U.S. Department of Agriculture, Food and Nutrition Service.**  
+  [SNAP Retailer Locator – Historical Data](https://www.fns.usda.gov/snap/retailer/historical-data)  
+  *Comprehensive list of authorized SNAP retailers, used to measure healthy‑food availability.*
+
 * **United States Census Bureau.**  
   [TIGER/Line 2023 Block Group Shapefiles (tl_2023_48_bg.zip)](https://www2.census.gov/geo/tiger/TIGER2023/BG/tl_2023_48_bg.zip)  
   *Spatial boundaries for every Texas block group, enabling map joins and geospatial analysis.*
@@ -69,10 +73,6 @@ Once food_desert_analysis notebook is run, the following food deserts maps can b
 * **U.S. Department of Agriculture, Economic Research Service.**  
   [Food Access Research Atlas](https://www.ers.usda.gov/data-products/food-access-research-atlas/)  
   *National database identifying variables like low‑access and low‑income census tracts (our baseline “food‑desert” reference).*
-
-* **U.S. Department of Agriculture, Food and Nutrition Service.**  
-  [SNAP Retailer Locator – Historical Data](https://www.fns.usda.gov/snap/retailer/historical-data)  
-  *Comprehensive list of authorized SNAP retailers, used to measure healthy‑food availability.*
 
 * **Kaggle.** *Fast Food Restaurants* dataset (Datafiniti, 2019).  
   <https://www.kaggle.com/datasets/datafiniti/fast-food-restaurants>  
@@ -82,13 +82,13 @@ Once food_desert_analysis notebook is run, the following food deserts maps can b
 
   ### Methodologies Implemented  
 
-  | #    | Definition                       | Criteria                                                     | General Metrics                                        |
-  | ---- | -------------------------------- | :----------------------------------------------------------- | ------------------------------------------------------ |
-  | 1    | **USDA Low‑Income / Low‑Access** | Poverty ≥ 20 % **AND** nearest supermarket > 1 mi (urban) / 10 mi (rural) | Distance + Income                                      |
-  | 2    | **CDC Half‑Mile Access**         | No supermarket within the block group **OR** within 0.5 mi of its boundary (income not required) | Distance                                               |
-  | 3    | **USDA + Vehicle Accessibility** | Low‑income **AND** (≥ 10 % households w/o vehicle & > 0.5 mi to store **OR** > 20 mi to store) | Distance + Income + Vehicle Access                     |
-  | 4    | **Food Swamp Density**           | Unhealthy outlets (fast food + convenience) > healthy supermarkets inside block group | Fast Food Density / Grocery Ratio                      |
-  | 5    | **Proposed Definition**          | **<u>XXXXXXXX</u>**(update definition)                       | Distance + Income + Vehicle Access + Urban/Rural split |
+  | #    | Definition                                               | Criteria                                                     | General Metrics                                         |
+  | ---- | -------------------------------------------------------- | :----------------------------------------------------------- | ------------------------------------------------------- |
+  | 1    | **USDA Low‑Income / Low‑Access**                         | Poverty ≥ 20 % **AND** nearest supermarket > 1 mi (urban) / 10 mi (rural) | Distance + Income                                       |
+  | 2    | **CDC Half‑Mile Access**                                 | No supermarket within the block group **OR** within 0.5 mi of its boundary (income not required) | Distance                                                |
+  | 3    | **USDA + Vehicle Accessibility**                         | Low‑income **AND** (≥ 10 % households w/o vehicle & > 0.5 mi to store **OR** > 20 mi to store) | Distance + Income + Vehicle Access                      |
+  | 4    | **Food Swamp Density**                                   | Unhealthy outlets (fast food + convenience) > healthy supermarkets inside block group | Fast Food Density / Grocery Ratio                       |
+  | 5    | <span style="color:gold;">**Proposed Definition**</span> | Low Income **AND**:  **(a)** If urban and low vehicle access: 1 mile; **(b)** If urban and adequate vehicle access: 10 (30 minutes max in vehicle, we assume 30 mph average speed limit in urban areas); **(c)** If rural and low vehicle access: 0.5 mile; **(d)*** If rural and adequate vehicle access: 20 (30 minutes max in vehicle, we assume 60 mph average speed limit in rural areas) | Income + Urban/Rural split +  Vehicle Access + Distance |
 
   Each definition is implemented as a reusable Python function in the notebook so users can **adjust** thresholds or **add** new metrics.  
 
