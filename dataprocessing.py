@@ -2,7 +2,7 @@ import pandas as pd
 import numpy as np
 import warnings 
 import geopandas as gpd
-import requests, zipfile, io
+# import requests, zipfile, io
 from geopy import distance
 import warnings
 warnings.filterwarnings('ignore')
